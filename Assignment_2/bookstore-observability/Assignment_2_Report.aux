@@ -1,0 +1,56 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Part A: Improving the HTTP API}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}REST Constraints and Architectural Compliance}{1}{subsection.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}OpenAPI Specification (OAS 3.1) and Endpoint Verification}{1}{subsection.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}User Task Before/After: Book Creation and Inventory Management}{1}{subsection.1.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces The six REST constraints applied to the Bookstore API.}}{2}{table.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:rest_constraints}{{1}{2}{The six REST constraints applied to the Bookstore API}{table.caption.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Interactive OpenAPI Swagger UI at \texttt  {http://127.0.0.1:8000/docs} displaying categorized routes and schema definitions.}}{2}{figure.caption.2}\protected@file@percent }
+\newlabel{fig:swagger_overview}{{1}{2}{Interactive OpenAPI Swagger UI at \texttt {http://127.0.0.1:8000/docs} displaying categorized routes and schema definitions}{figure.caption.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.4}Interactive Endpoint Verification Evidence}{2}{subsection.1.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Before/After architectural analysis of the Book Creation user task.}}{3}{table.caption.3}\protected@file@percent }
+\newlabel{tab:before_after}{{2}{3}{Before/After architectural analysis of the Book Creation user task}{table.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.5}Rate Limiting and Resilient Client Implementation}{3}{subsection.1.5}\protected@file@percent }
+\newlabel{fig:swagger_post_entry}{{2a}{4}{Valid payload and \texttt {Idempotency-Key} entry}{figure.caption.4}{}}
+\newlabel{sub@fig:swagger_post_entry}{{a}{4}{Valid payload and \texttt {Idempotency-Key} entry}{figure.caption.4}{}}
+\newlabel{fig:swagger_post_success}{{2b}{4}{\texttt {201 Created} response with \texttt {Location} header}{figure.caption.4}{}}
+\newlabel{sub@fig:swagger_post_success}{{b}{4}{\texttt {201 Created} response with \texttt {Location} header}{figure.caption.4}{}}
+\newlabel{fig:swagger_idempotent_hit}{{2c}{4}{Repeated request returning cached \texttt {201} (\texttt {HIT})}{figure.caption.4}{}}
+\newlabel{sub@fig:swagger_idempotent_hit}{{c}{4}{Repeated request returning cached \texttt {201} (\texttt {HIT})}{figure.caption.4}{}}
+\newlabel{fig:swagger_negative_response}{{2d}{4}{Validation rejection returning RFC~7807 \texttt {422}}{figure.caption.4}{}}
+\newlabel{sub@fig:swagger_negative_response}{{d}{4}{Validation rejection returning RFC~7807 \texttt {422}}{figure.caption.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Interactive verification evidence executed through Swagger UI.}}{4}{figure.caption.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Backend console logs verifying request correlation IDs, status codes, and execution durations.}}{4}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:terminal_logs}{{3}{4}{Backend console logs verifying request correlation IDs, status codes, and execution durations}{figure.caption.5}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {1}{\ignorespaces Execution log from \texttt  {caller\_http.py} demonstrating retries, breaker trip, and recovery.}}{4}{lstlisting.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Part B: Adding a gRPC Microservice}{5}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Architecture and Shared Source of Truth}{5}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Protobuf Definition and Code Generation}{5}{subsection.2.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {2}{\ignorespaces Protobuf definition for Bookstore service (\texttt  {proto/bookstore.proto})}}{5}{lstlisting.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Call Path Comparison: HTTP/1.1 vs. gRPC over HTTP/2}{6}{subsection.2.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces End-to-end execution paths comparing HTTP/1.1 REST and gRPC over HTTP/2.}}{6}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:call_paths}{{4}{6}{End-to-end execution paths comparing HTTP/1.1 REST and gRPC over HTTP/2}{figure.caption.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Semantic Mapping of Status Codes}{6}{subsection.2.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Status code mappings between HTTP REST and gRPC services.}}{6}{table.caption.7}\protected@file@percent }
+\newlabel{tab:status_codes}{{3}{6}{Status code mappings between HTTP REST and gRPC services}{table.caption.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}Trace Correlation Across Protocol Boundaries}{7}{subsection.2.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Part C: Extending the Metrics}{7}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Metrics Audit and Gap Analysis}{7}{subsection.3.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Audit and gap analysis of Assignment 1 metrics.}}{7}{table.caption.8}\protected@file@percent }
+\newlabel{tab:metrics_audit}{{4}{7}{Audit and gap analysis of Assignment 1 metrics}{table.caption.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Extended Metrics Specifications}{7}{subsection.3.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Prometheus metrics specifications for Assignment 2.}}{8}{table.caption.9}\protected@file@percent }
+\newlabel{tab:metric_specs}{{5}{8}{Prometheus metrics specifications for Assignment 2}{table.caption.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Prometheus Scrape Configuration and Grafana Telemetry}{8}{subsection.3.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Grafana Dashboard: Book Creation Rate, Inventory Gauge, and gRPC Method Throughput side-by-side.}}{8}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:grafana_1}{{5}{8}{Grafana Dashboard: Book Creation Rate, Inventory Gauge, and gRPC Method Throughput side-by-side}{figure.caption.10}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Conclusion}{8}{section.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Grafana Dashboard: Response latencies (p95 HTTP vs. gRPC p50/p95 histograms) and in-flight active concurrency.}}{9}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:grafana_2}{{6}{9}{Grafana Dashboard: Response latencies (p95 HTTP vs. gRPC p50/p95 histograms) and in-flight active concurrency}{figure.caption.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Grafana Dashboard: HTTP Rate-Limiting rejections (429s) plotted alongside cross-protocol creation volume.}}{9}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:grafana_3}{{7}{9}{Grafana Dashboard: HTTP Rate-Limiting rejections (429s) plotted alongside cross-protocol creation volume}{figure.caption.12}{}}
+\gdef \@abspage@last{9}

@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package bookstore;
+
+// Service definition for the Bookstore RPC operations
+service BookService {
+  // Creates a new book in the shared bookstore catalog
+  rpc CreateBook (CreateBookRequest) returns (BookResponse);
+
+  // Retrieves an existing book by its numeric ID
+  rpc GetBook (GetBookRequest) returns (BookResponse);
+
+  // Lists all books in the catalog
+  rpc ListBooks (ListBooksRequest) returns (BookListResponse);
+}
+
+// Request to create a new book
+message CreateBookRequest {
+  string title = 1;
+  string author = 2;
+  double price = 3;
+  string idempotency_key = 4;
+}
+
+// Request to retrieve a book by its identifier
+message GetBookRequest {
+  int32 id = 1;
+}
+
+// Empty request to list all catalog books
+message ListBooksRequest {}
+
+// Response containing details of a single book
+message BookResponse {
+  int32 id = 1;
+  string title = 2;
+  string author = 3;
+  double price = 4;
+  string created_at = 5;
+}
+
+// Response containing a list of books
+message BookListResponse {
+  repeated BookResponse books = 1;
+  int32 total_count = 2;
+}

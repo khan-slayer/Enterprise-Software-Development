@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker & Data Volumes
+.dockerignore
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Elastic / Kibana / Logs
+*.log
