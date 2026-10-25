@@ -1,0 +1,44 @@
+# LaTeX build artifacts & temporary files
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+*.nav
+*.snm
+*.vrb
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# SQLite databases & WAL logs (Data volumes - excluded from submission)
+*.db
+*.db-wal
+*.db-shm
+data/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# IDE and Editor configurations
+.vscode/
+.idea/
+*.swp
+*.swo

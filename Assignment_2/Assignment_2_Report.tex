@@ -7,6 +7,7 @@
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{graphicx}
+\graphicspath{{./}{bookstore-observability/}}
 \usepackage{subcaption}
 \usepackage{xcolor}
 \usepackage{hyperref}
@@ -60,8 +61,8 @@
 % --- Metadata ---
 \title{\vspace{-1.5cm}\textbf{\Large Enterprise Software Development (Fall 2026)}\\[0.3em]
 \textbf{\LARGE Assignment 2: HTTP APIs, gRPC Services, and Metrics Observability}}
-\author{\textbf{Muhammad Abdullah Khan} \\ Department of Computer Science}
-\date{\today}
+\author{\textbf{Muhammad Abdullah Khan} \\ DSSE}
+\date{}
 
 \begin{document}
 
@@ -150,7 +151,7 @@ Using the Swagger UI interface, we executed three mandatory verification scenari
 \begin{enumerate}
     \item \textbf{Valid Request Submission:} As depicted in Figures~\ref{fig:swagger_post_entry} and~\ref{fig:swagger_post_success}, submitting a valid book payload with \texttt{Idempotency-Key: key-123} returns \texttt{201 Created}, a \texttt{Location: /books/34} header, and payload \texttt{X-Cache-Lookup: MISS}.
     \item \textbf{Repeated Request (Idempotency Safe Repeat):} Submitting the exact same payload and key returns the cached representation with \texttt{X-Cache-Lookup: HIT} (Figure~\ref{fig:swagger_idempotent_hit}), avoiding duplicate database records.
-    \item \textbf{Invalid Input Rejection:} Submitting a negative price (\texttt{-5.00}) triggers immediate rejection with status \texttt{422 Unprocessable Content} formatted according to RFC~7807 (Figures~\ref{fig:swagger_negative_input} and~\ref{fig:swagger_negative_response}).
+    \item \textbf{Invalid Input Rejection:} Submitting a negative price (\texttt{-5.00}) triggers immediate rejection with status \texttt{422 Unprocessable Content} formatted according to RFC~7807 (Figure~\ref{fig:swagger_negative_response}).
     \item \textbf{Console Execution Verification:} Figure~\ref{fig:terminal_logs} shows the backend Uvicorn terminal logs confirming request IDs, execution durations, and HTTP status codes.
 \end{enumerate}
 
@@ -324,7 +325,7 @@ Because gRPC operates over HTTP/2 framing, standard HTTP response status lines a
 \centering
 \small
 \renewcommand{\arraystretch}{1.25}
-\begin{tabularx}{\textwidth}{p{3.2cm} p{2.2cm} p{2.8cm} X}
+\begin{tabularx}{\textwidth}{p{2.8cm} p{2.2cm} p{3.2cm} X}
 \toprule
 \textbf{Scenario} & \textbf{HTTP Status} & \textbf{gRPC Status} & \textbf{Semantic Mapping Rationale} \\
 \midrule
@@ -339,11 +340,50 @@ Because gRPC operates over HTTP/2 framing, standard HTTP response status lines a
 \label{tab:status_codes}
 \end{table}
 
+\noindent\textbf{gRPC Client Execution Evidence (\texttt{caller\_grpc.py}):}\\
+To verify request processing and status mapping under real client execution, our standalone Python client (\texttt{caller\_grpc.py}) executes calls directly against the running gRPC service. Listing~\ref{lst:caller_grpc} demonstrates valid creation, safe idempotency repeats, client input validation rejection, duplicate detection, and resource querying under an enforced 2.0-second deadline.
+
+\begin{lstlisting}[language=bash, caption={Execution log from \texttt{caller\_grpc.py} demonstrating client deadlines, successful RPC execution, safe repeats, and gRPC status codes.}, label={lst:caller_grpc}]
+======================================================================
+ASSIGNMENT 2 - PART B: gRPC CLIENT DEMONSTRATION
+Target Server: localhost:50051 (Shared SQLite WAL Persistence)
+======================================================================
+
+--- 1. SUCCESSFUL REQUEST: CreateBook (HTTP/2 Binary RPC) ---
+[gRPC] Sending CreateBook (Deadline: 2.0s, Request-ID: grpc-client-d748489e)
+       Payload: Title='Distributed Systems Vol 1', Author='Martin Kleppmann', Price=$38.50, IdempotencyKey='grpc-key-70114f'
+[gRPC OK] Book Created successfully! Status: OK (0)
+   ID: 6 | Title: 'Distributed Systems Vol 1' | Author: 'Martin Kleppmann' | Price: $38.50
+   Trailing Correlation ID: grpc-client-d748489e
+
+--- 2. SAFE REPEAT: CreateBook with identical Idempotency-Key ---
+[gRPC] Sending CreateBook (Deadline: 2.0s, Request-ID: grpc-client-d73c592d)
+       Payload: Title='Distributed Systems Vol 1', Author='Martin Kleppmann', Price=$38.50, IdempotencyKey='grpc-key-70114f'
+[gRPC OK] Safe Repeat: Existing record returned without duplicate insert! Status: OK (0)
+   ID: 6 | Title: 'Distributed Systems Vol 1' | Author: 'Martin Kleppmann' | Price: $38.50
+
+--- 3. FAILED REQUEST: Invalid Argument (Price <= 0) ---
+[gRPC] Sending CreateBook (Deadline: 2.0s, Request-ID: grpc-client-839b2f31)
+       Payload: Title='Free E-Book', Author='Unknown', Price=$-5.00, IdempotencyKey=''
+[gRPC INVALID_ARGUMENT] Status Code: 3 (INVALID_ARGUMENT)
+   Error Details: Price must be strictly positive (> 0).
+
+--- 4. FAILED REQUEST: Duplicate Book (ALREADY_EXISTS) ---
+[gRPC] Sending CreateBook (Deadline: 2.0s, Request-ID: grpc-client-13de3ac6)
+       Payload: Title='1984', Author='George Orwell', Price=$9.99, IdempotencyKey=''
+[gRPC ALREADY_EXISTS] Status Code: 6 (ALREADY_EXISTS)
+   Error Details: A book with title '1984' by 'George Orwell' already exists.
+
+--- 5. SUCCESSFUL & FAILED GET REQUESTS (OK vs. NOT_FOUND) ---
+[gRPC] Sending GetBook (ID: 1, Deadline: 2.0s) -> [gRPC OK] Found: ID=1, Title='The Great Gatsby', Price=$10.99
+[gRPC] Sending GetBook (ID: 9999, Deadline: 2.0s) -> [gRPC NOT_FOUND] Status Code: 5 (NOT_FOUND) | Details: Book 9999 not found.
+\end{lstlisting}
+
 \subsection{Trace Correlation Across Protocol Boundaries}
 Structured JSON logging is preserved across both services:
 \begin{itemize}\setlength{\itemsep}{0pt}
     \item \textbf{HTTP:} Correlation ID received via \texttt{x-request-id} header (or generated as a UUID) and echoed back in the response header.
-    \item \textbf{gRPC:} Extracted from invocation metadata via \texttt{dict(context.invocation\_metadata()).get('x-request-id')}. The server interceptor injects the correlation ID into trailing metadata, outputting uniform JSON logs for Filebeat ingestion:
+    \item \textbf{gRPC:} Extracted from invocation metadata via \texttt{context.invocation\_metadata()} for the key \texttt{'x-request-id'}. The server interceptor binds the correlation ID to thread-local context and injects it into trailing metadata, outputting uniform JSON logs for Filebeat ingestion:
 \end{itemize}
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 {"asctime": "2026-10-25 00:15:30", "levelname": "INFO", "name": "bookstore_grpc", "message": "gRPC call processed", "request_id": "grpc-client-d748489e", "service": "bookstore.BookService", "method": "CreateBook", "status": "OK", "duration": 0.0385}
@@ -381,19 +421,19 @@ Table~\ref{tab:metrics_audit} audits the telemetry pipeline from Assignment 1 an
 \subsection{Extended Metrics Specifications}
 Table~\ref{tab:metric_specs} specifies all new and revised Prometheus metrics. All metrics strictly adhere to bounded cardinality rules: high-cardinality values such as user IDs, request IDs, and trace IDs are strictly prohibited as Prometheus labels.
 
-\begin{table}[h!]
+\begin{table}[htbp]
 \centering
 \small
-\renewcommand{\arraystretch}{1.25}
-\begin{tabularx}{\textwidth}{p{3.2cm} p{1.6cm} p{1.2cm} p{2.2cm} p{1.5cm} X}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{p{3.2cm} p{1.8cm} p{1.1cm} p{2.4cm} p{2.2cm} X}
 \toprule
-\textbf{Metric Name} & \textbf{Type} & \textbf{Unit} & \textbf{Bounded Labels} & \textbf{Origin} & \textbf{PromQL Query} \\
+\textbf{Metric Name} & \textbf{Type (Unit)} & \textbf{Origin} & \textbf{Code Location} & \textbf{Bounded Labels} & \textbf{Purpose} \\
 \midrule
-\texttt{grpc\_server\_handled\_total} & Counter & calls & \texttt{grpc\_method}, \texttt{grpc\_code} & Server & \texttt{sum(rate(grpc\_server\_handled\_total[1m])) by (grpc\_method, grpc\_code)} \\
-\texttt{grpc\_server\_handling\_seconds} & Histogram & seconds & \texttt{grpc\_method}, \texttt{le} & Server & \texttt{histogram\_quantile(0.95, sum(rate(grpc\_server\_handling\_seconds\_bucket[5m])) by (grpc\_method, le))} \\
-\texttt{grpc\_server\_in\_flight\_requests} & Gauge & calls & \texttt{grpc\_method} & Server & \texttt{grpc\_server\_in\_flight\_requests} \\
-\texttt{http\_rate\_limited\_total} & Counter & reqs & \texttt{endpoint} & Server & \texttt{rate(http\_rate\_limited\_total[1m])} \\
-\texttt{books\_created\_total} & Counter & items & \texttt{protocol} & Server & \texttt{sum(rate(books\_created\_total[1m])) by (protocol)} \\
+\texttt{grpc\_server\_}\newline\texttt{handled\_total} & Counter\newline(calls) & Server & \texttt{grpc\_server.py}\newline\footnotesize(:L116) & \texttt{grpc\_method},\newline\texttt{grpc\_code} & Tracks RPC call volume and error rates partitioned by canonical status codes. \\
+\texttt{grpc\_server\_}\newline\texttt{handling\_seconds} & Histogram\newline(s) & Server & \texttt{grpc\_server.py}\newline\footnotesize(:L121) & \texttt{grpc\_method},\newline\texttt{le} & Measures server-side RPC handler duration across fine-grained execution buckets. \\
+\texttt{grpc\_server\_}\newline\texttt{in\_flight\_requests} & Gauge\newline(reqs) & Server & \texttt{grpc\_server.py}\newline\footnotesize(:L74) & \texttt{grpc\_method} & Monitors real-time active executions to provide early signals of thread saturation. \\
+\texttt{http\_rate\_}\newline\texttt{limited\_total} & Counter\newline(reqs) & Server & \texttt{app.py}\newline\footnotesize(:L297) & \texttt{endpoint} & Quantifies dropped HTTP calls caused by sliding-window rate limit violations (429). \\
+\texttt{books\_created\_total} & Counter\newline(items) & Server & \texttt{app.py}:L368\newline\texttt{grpc\_server}:L202 & \texttt{protocol} & Tracks and compares catalog ingestion throughput across HTTP and gRPC. \\
 \bottomrule
 \end{tabularx}
 \caption{Prometheus metrics specifications for Assignment 2.}
@@ -402,6 +442,45 @@ Table~\ref{tab:metric_specs} specifies all new and revised Prometheus metrics. A
 
 \noindent\textbf{Design Choice: In-Flight Requests vs. Message Size:}\\
 We chose \textbf{In-Flight Requests (\texttt{grpc\_server\_in\_flight\_requests})} over Message Size because gRPC utilizes multiplexed HTTP/2 streams over persistent TCP connections. In production, head-of-line blocking and thread-pool exhaustion occur when concurrent calls back up against slow database locks. Tracking in-flight requests provides an immediate leading indicator of saturation before CPU thresholds are crossed. Because bookstore catalog messages have small, predictable payload sizes (200--500 bytes), message size metrics offer minimal diagnostic value by comparison.
+
+\subsection{PromQL Telemetry Queries and Latency Calibration}
+\textbf{Histogram Calibration and Bucket Selection:}\\
+The gRPC latency histogram (\texttt{grpc\_server\_handling\_seconds}) records execution time at the \textbf{Server} level inside the gRPC server interceptor (\texttt{ObservabilityInterceptor} in \texttt{grpc\_server.py:L121}) using high-resolution timers. Measuring duration at the server is essential to capture pure application processing and database execution, eliminating network latency and client-side scheduling jitter.
+
+We configured the histogram with 9 targeted bucket thresholds:
+\begin{center}
+\texttt{[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5]} \text{seconds}
+\end{center}
+\textbf{Suitability Rationale:} Under nominal conditions, local SQLite WAL queries complete rapidly within 5--25ms (\texttt{0.005s}--\texttt{0.025s}). When multiple concurrent writers queue for database transaction locks, latencies shift into the 50--250ms range (\texttt{0.05s}--\texttt{0.25s}). The upper buckets (0.5s, 1.0s, 2.5s) capture severe disk contention and client deadline boundaries (2.0s timeout).
+
+\noindent\textbf{Stated Evaluation Window and PromQL Queries:}\\
+All rate calculations and quantile aggregations are evaluated over a stated \textbf{5-minute rolling rate window} (\texttt{[5m]}) for latency quantiles and a \textbf{1-minute rolling rate window} (\texttt{[1m]}) for call throughput:
+\begin{itemize}\setlength{\itemsep}{1pt}
+    \item \textbf{gRPC p50 (Median) Latency (5m rolling window):}
+    \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+histogram_quantile(0.50, sum(rate(grpc_server_handling_seconds_bucket[5m])) by (grpc_method, le))
+    \end{lstlisting}
+    \item \textbf{gRPC p95 (Tail) Latency (5m rolling window):}
+    \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+histogram_quantile(0.95, sum(rate(grpc_server_handling_seconds_bucket[5m])) by (grpc_method, le))
+    \end{lstlisting}
+    \item \textbf{gRPC Calls and Error Rate by RPC Method and Status (1m window):}
+    \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+sum(rate(grpc_server_handled_total[1m])) by (grpc_method, grpc_code)
+    \end{lstlisting}
+    \item \textbf{gRPC Active In-Flight Concurrency:}
+    \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+grpc_server_in_flight_requests
+    \end{lstlisting}
+    \item \textbf{Abuse Protection: Rate-Limited Drop Rate (HTTP 429):}
+    \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+rate(http_rate_limited_total[1m])
+    \end{lstlisting}
+    \item \textbf{Catalog Ingestion Throughput by Protocol (HTTP vs. gRPC):}
+    \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+sum(rate(books_created_total[1m])) by (protocol)
+    \end{lstlisting}
+\end{itemize}
 
 \subsection{Prometheus Scrape Configuration and Grafana Telemetry}
 The updated Prometheus configuration (\texttt{prometheus.yml}) scrapes both services concurrently:
@@ -423,23 +502,25 @@ scrape_configs:
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.92\textwidth]{figures/grafana_overview_1.png}
-    \caption{Grafana Dashboard: Book Creation Rate, Inventory Gauge, and gRPC Method Throughput side-by-side.}
+    \caption{Grafana Dashboard: Cross-protocol throughput and latency comparison beside HTTP (Book Creation Rate, gRPC Method Rate \& Error Status, HTTP p95 Latency, and gRPC p50/p95 Histograms).}
     \label{fig:grafana_1}
 \end{figure}
 
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.92\textwidth]{figures/grafana_overview_2.png}
-    \caption{Grafana Dashboard: Response latencies (p95 HTTP vs. gRPC p50/p95 histograms) and in-flight active concurrency.}
+    \caption{Grafana Dashboard: Concurrency and catalog capacity gauges (Books currently in Inventory and gRPC In-Flight Active Requests).}
     \label{fig:grafana_2}
 \end{figure}
 
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.92\textwidth]{figures/grafana_overview_3.png}
-    \caption{Grafana Dashboard: HTTP Rate-Limiting rejections (429s) plotted alongside cross-protocol creation volume.}
+    \caption{Grafana Dashboard: Missing project telemetry (HTTP Rate-Limit Drops vs. Protocol Creations, Average Creation Time, System CPU, and Cardinality Growth).}
     \label{fig:grafana_3}
 \end{figure}
+
+\pagebreak
 
 % =========================================================================
 % SECTION 4: CONCLUSION
