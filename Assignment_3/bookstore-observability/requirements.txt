@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+prometheus-fastapi-instrumentator
+pydantic
+python-json-logger
+requests
+httpx
+grpcio
+grpcio-tools
+grpcio-health-checking
+prometheus_client

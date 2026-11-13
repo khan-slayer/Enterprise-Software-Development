@@ -1,0 +1,118 @@
+name: bookstore
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    deploy:
+      replicas: 3
+    expose:
+      - "8000"
+      - "50051"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    logging: *default-logging
+
+  envoy:
+    image: envoyproxy/envoy:v1.31-latest
+    container_name: bookstore-envoy
+    command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "warn"]
+    ports:
+      - "8080:8080"
+      - "8000:8080"
+      - "50051:50051"
+      - "9901:9901"
+    volumes:
+      - ./envoy:/etc/envoy:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+    logging: *default-logging
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: bookstore-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.size=256MB"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - app
+      - envoy
+    restart: unless-stopped
+    logging: *default-logging
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: bookstore-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_LOG_LEVEL=warn
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana_dashboard.json:/var/lib/grafana/dashboards/grafana_dashboard.json:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    logging: *default-logging
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: bookstore-node-exporter
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+    logging: *default-logging
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: bookstore-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+    logging: *default-logging
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.0
+    container_name: bookstore-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    logging: *default-logging
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.15.0
+    container_name: bookstore-filebeat
+    user: root
+    command: ["--strict.perms=false"]
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    logging: *default-logging

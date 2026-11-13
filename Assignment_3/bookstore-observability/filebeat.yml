@@ -1,0 +1,24 @@
+filebeat.inputs:
+- type: container
+  paths:
+    - '/var/lib/docker/containers/*/*.log'
+  processors:
+    - decode_json_fields:
+        fields: ["message"]
+        target: "json"
+        overwrite_keys: true
+
+processors:
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+  - drop_event:
+      when:
+        not:
+          or:
+            - equals:
+                container.labels.com_docker_compose_service: "app"
+            - equals:
+                container.labels.com_docker_compose_service: "envoy"
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]

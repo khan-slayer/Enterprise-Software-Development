@@ -1,0 +1,192 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=0.72in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{float}
+\usepackage{needspace}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\lstset{
+    basicstyle=\ttfamily\scriptsize,
+    breaklines=true,
+    breakatwhitespace=false,
+    columns=flexible,
+    frame=single,
+    backgroundcolor=\color{gray!8},
+    aboveskip=4pt,
+    belowskip=6pt
+}
+
+\title{\textbf{Assignment 3: Load Balancing and Observability}}
+\author{Enterprise Software Development --- Fall 2026}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Architecture and Shared vs.\ Per-Replica State (Part A)}
+We extended the Assignment 2 Bookstore system to run \textbf{three identical application replicas (A, B, C)} via Docker Compose scaling (\texttt{deploy.replicas: 3} on service \texttt{app}, exposing internal ports \texttt{8000} and \texttt{50051}). Each replica runs FastAPI (HTTP) and the gRPC server (\texttt{BookService} and \texttt{grpc.health.v1.Health}) in a single Python process with a unified Prometheus registry (\texttt{metrics.py}). On startup, each replica resolves its identity (\texttt{A}, \texttt{B}, \texttt{C}) via DNS lookup against \texttt{bookstore-app-1..3}, adds \texttt{replica} and \texttt{request\_id} to all JSON logs, and returns \texttt{x-replica-id} and \texttt{x-request-id} in HTTP response headers and gRPC initial/trailing metadata.
+
+\begin{center}
+\texttt{HTTP/gRPC Clients $\longrightarrow$ Envoy (:8080 HTTP, :50051 HTTP/2 gRPC) $\longrightarrow$ Replicas A, B, C $\longrightarrow$ Shared SQLite (WAL)}
+\end{center}
+
+Prometheus (\texttt{:9090}) scrapes Replicas A, B, C (\texttt{:8000/metrics}) and Envoy (\texttt{:9901/stats/prometheus}) \textbf{directly} every 5s. Filebeat ships container JSON logs from \texttt{envoy} and \texttt{app} replicas to Elasticsearch (\texttt{:9200}).
+
+\begin{table}[H]
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}p{3.4cm}p{3.2cm}p{2.2cm}p{6.8cm}@{}}
+\toprule
+\textbf{State Component} & \textbf{Storage Location} & \textbf{Shared?} & \textbf{Impact When Spread Across Replicas} \\
+\midrule
+Book Catalog (\texttt{books}) & SQLite volume (WAL) & \textbf{Shared} & Consistent reads/writes; \texttt{UNIQUE(title, author)} prevents duplicates across all replicas. \\
+Idempotency Keys & SQLite volume (WAL) & \textbf{Shared} & Retries routed to any replica still hit the shared table and return \texttt{X-Cache-Lookup: HIT}. \\
+Rate-Limit Counters & In-memory \texttt{dict} & \textbf{Per-replica} & Effective limit triples ($3\times 5 = 15$ req/10s); without \texttt{X-Forwarded-For}, Envoy's IP is seen as client IP. \\
+Inventory Gauge & Prometheus \texttt{Gauge} & \textbf{Per-replica} & Idle replicas retain stale gauge values until their next local write. \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Shared vs.\ per-replica state analysis.}
+\end{table}
+
+\section{Health-Check Settings and Observability Queries (Part B)}
+\sloppy
+\textbf{Active Health Checks (\texttt{envoy/envoy-part-d-hc.yaml}):} HTTP cluster checks \texttt{GET /health}; gRPC cluster uses \texttt{grpc\_health\_check} for \texttt{bookstore.BookService}. Settings: \texttt{interval: 2s}, \texttt{timeout: 1s}, \texttt{unhealthy\_threshold: 2}, \texttt{healthy\_threshold: 2}.
+
+\textbf{Grafana Dashboard PromQL Queries (1m rate window):}
+\begin{lstlisting}
+Request Rate (HTTP):   sum by (replica) (rate(http_server_requests_total[1m]))
+Request Rate (gRPC):   sum by (replica) (rate(grpc_server_handled_total[1m]))
+Traffic Share % (HTTP):100 * sum by (replica) (rate(http_server_requests_total[1m])) / ignoring(replica) group_left sum(rate(http_server_requests_total[1m]))
+Traffic Share % (gRPC):100 * sum by (replica) (rate(grpc_server_handled_total[1m])) / ignoring(replica) group_left sum(rate(grpc_server_handled_total[1m]))
+Active Requests:       sum by (replica) (http_server_in_flight_requests)  |  sum by (replica) (grpc_server_in_flight_requests)
+p50 / p95 Latency:     histogram_quantile(0.50|0.95, sum by (le, replica) (rate(http_server_request_duration_seconds_bucket[1m])))
+                       histogram_quantile(0.50|0.95, sum by (le, replica) (rate(grpc_server_handling_seconds_bucket[1m])))
+Errors by Status:      sum by (replica, status) (rate(http_server_requests_total{status!~"2.."}[1m]))
+                       sum by (replica, grpc_code) (rate(grpc_server_handled_total{grpc_code!="OK"}[1m]))
+\end{lstlisting}
+
+\section{Baselines (Parts B \& C)}
+All runs used \texttt{fixed\_rate\_client.py} (open-loop \texttt{asyncio} ticker at 20.0 req/s, retries and circuit breakers disabled, single shared HTTP/2 connection for gRPC, querying \texttt{GET /books/1} and \texttt{GetBook(id=1)}).
+\begin{itemize}
+    \item \textbf{Part B (A-Only):} 100\% of HTTP (400/400, p50=14.88\,ms, p95=51.81\,ms) and gRPC (400/400, p50=11.98\,ms,\linebreak p95=24.28\,ms) went to Replica A; B and C remained idle.
+    \item \textbf{Part C (Equal Round Robin 1:1:1):} HTTP split \textbf{33.08\% / 33.58\% / 33.33\%} (p95 improved 51.81$\to$36.31\,ms across 3 event loops); gRPC split \textbf{33.25\% / 33.25\% / 33.50\%} (p95=23.12\,ms, 0\% error).
+    \item \textbf{Why HTTP/2 on Envoy's gRPC Listener Matters:} A gRPC client multiplexes all calls over one persistent connection. Plain TCP (L4) proxying pins the entire connection to one backend. Setting \texttt{codec\_type: HTTP2} lets Envoy inspect individual HTTP/2 streams and balance \textbf{per RPC call} across A, B, and C.
+\end{itemize}
+
+\section{Experiments, Summary Table, and Access-Log Cross-Check (Part D)}
+\begin{table}[H]
+\centering
+\scriptsize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llccccl@{}}
+\toprule
+\textbf{Run / Interface} & \textbf{Policy \& Fault} & \textbf{Target / Actual RPS} & \textbf{A / B / C Shares (\%)} & \textbf{p50 / p95 (ms)} & \textbf{Err Rate} & \textbf{Key Observation} \\
+\midrule
+Part B (HTTP) & A-Only (None) & 20.0 / 20.04 & 100.0 / 0.0 / 0.0 & 14.88 / 51.81 & 0.00\% & All traffic on A; B and C idle \\
+Part B (gRPC) & A-Only (None) & 20.0 / 20.04 & 100.0 / 0.0 / 0.0 & 11.98 / 24.28 & 0.00\% & All RPCs on A; B and C idle \\
+Part C (HTTP) & RR 1:1:1 (None) & 20.0 / 20.04 & 33.08 / 33.58 / 33.33 & 13.79 / 36.31 & 0.25\% & Balanced $\sim$33.3\% split \\
+Part C (gRPC) & RR 1:1:1 (None) & 20.0 / 20.04 & 33.25 / 33.25 / 33.50 & 12.38 / 23.12 & 0.00\% & Per-call L7 HTTP/2 balance \\
+Part D.1 (HTTP) & WRR 2:1:1 (None) & 20.0 / 20.05 & 50.25 / 24.75 / 25.00 & 13.25 / 38.30 & 0.00\% & Matches 50:25:25 target \\
+Part D.1 (gRPC) & WRR 2:1:1 (None) & 20.0 / 20.05 & 50.00 / 25.00 / 25.00 & 12.08 / 21.52 & 0.00\% & Exact 200:100:100 split \\
+Part D.2a (HTTP) & RR + Slow B (+250ms) & 20.0 / 20.04 & 33.25 / 33.25 / 33.50 & 22.32 / 275.44 & 0.00\% & 1/3 hit slow B; p95=275\,ms \\
+Part D.2a (gRPC) & RR + Slow B (+250ms) & 20.0 / 20.05 & 33.50 / 33.25 / 33.25 & 22.10 / 275.19 & 0.00\% & 1/3 hit slow B; p95=275\,ms \\
+Part D.2b (HTTP) & Least Req + Slow B & 20.0 / 20.05 & 39.75 / 17.50 / 42.75 & 14.68 / 274.40 & 0.00\% & B share halved; p50=14.7\,ms \\
+Part D.2b (gRPC) & Least Req + Slow B & 20.0 / 20.03 & 42.25 / 17.75 / 40.00 & 14.33 / 272.72 & 0.00\% & B share halved; p50=14.3\,ms \\
+Part D.3 (HTTP) & HC + Stop/Start B & 20.0 / 20.03 & 45.22 / 9.94 / 44.84 & 14.76 / 92.78 & 25.97\% & 187 503s; A/C absorb load \\
+Part D.3 (gRPC) & HC + Stop/Start B & 20.0 / 20.03 & 46.00 / 7.86 / 46.14 & 12.04 / 29.57 & 4.58\% & 33 errs in 4.3s; clean eject \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Summary of all 12 fixed-rate experimental runs (20 req/s).}
+\end{table}
+
+\begin{enumerate}
+    \item \textbf{Weighted Round Robin (2:1:1):}
+    \textbf{Prediction:} Replicas A, B, and C will receive 50\%, 25\%, and 25\% of traffic respectively; at 20 req/s on a single host with ample CPU headroom, latency should remain near the 1:1:1 baseline.
+    \textbf{Observations:} HTTP split \textbf{50.25\% / 24.75\% / 25.00\%} (p50=13.25\,ms, p95=38.30\,ms); gRPC split \textbf{50.00\% / 25.00\% / 25.00\%} (p50=12.08\,ms, p95=21.52\,ms), with 0\% errors and A handling $2\times$ the request rate of B or C.
+    \textbf{Explanation:} Envoy's weighted round-robin scheduler enforces the 2:1:1 ratio deterministically, while a higher weight does not add CPU/DB capacity---because all replicas were lightly loaded, latency did not degrade (under saturation, A would bottleneck first).
+
+    \item \textbf{Least Request vs.\ Round Robin (Slow Replica B +250\,ms):}
+    \textbf{Prediction:} Round Robin will keep sending 33.3\% of calls to B regardless of latency, inflating p50 and p95. Least Request (\texttt{choice\_count: 2}) will observe higher active in-flight requests on B and shift traffic to A and C, lowering B's share and mean/p50 latency.
+    \textbf{Observations:} Under RR, B received 33.25\% (HTTP p50=22.32\,ms, p95=275.44\,ms; gRPC p50=22.10\,ms, p95=275.19\,ms). Under Least Request, B's active requests spiked to 2 (vs.\ 0--1 on A/C) and B's share dropped to \textbf{17.50\%} (HTTP) and \textbf{17.75\%} (gRPC), reducing p50 to \textbf{14.68\,ms} (HTTP) / \textbf{14.33\,ms} (gRPC) and mean latency from $\sim$103\,ms to $\sim$63\,ms, while p95 stayed near 273\,ms.
+    \textbf{Explanation:} B's 250\,ms service time keeps requests in flight $\sim$15$\times$ longer than A/C, so power-of-two choices picks the less-busy replica (A or C) most of the time; because $>5\%$ of calls still land on B, p95 remains bounded by the 250\,ms fault.
+
+    \item \textbf{Failure \& Recovery with Active Health Checks:}
+    \textbf{Prediction:} Stopping B will cause brief errors for $\sim$2--4\,s until 2 consecutive health checks fail (\texttt{interval: 2s, unhealthy\_threshold: 2}), after which Envoy ejects B and shifts 100\% of traffic to A and C; restarting B will restore it after container boot plus 2 healthy checks.
+    \textbf{Observations:} Stopping \texttt{bookstore-app-2} at $t\approx 8\text{s}$ and restarting at $t=20\text{s}$ shifted traffic to A/C ($\sim$45--46\% each). For gRPC, errors occurred only between $t=8.589\text{s}$ and $12.906\text{s}$ (\textbf{4.32\,s}, 33 \texttt{UNAVAILABLE} errors, 4.58\%); for HTTP, 187 \texttt{503}s (25.97\%) occurred across stop and DNS-refresh intervals.
+    \textbf{Explanation:} The 4.32\,s gRPC error window matches \texttt{interval=2s $\times$ unhealthy\_threshold=2}. Upon restart at $t=20\text{s}$, Python/Uvicorn boot ($\sim$3\,s) plus \texttt{healthy\_threshold=2} ($\sim$4\,s) and \texttt{STRICT\_DNS} refresh restored B to 3/3 healthy right at the end of the 36\,s window.
+\end{enumerate}
+
+\textbf{Envoy Access-Log Cross-Check (Part D.1 WRR HTTP):} Querying Envoy's JSON access logs for the exact run window returned \textbf{400} events: A=201 (50.25\%), B=99 (24.75\%), C=100 (25.00\%)---a 100\% match with client counts.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/traffic_shares_comparison.png}
+\caption{Per-replica traffic share (\%) across all policies for HTTP and gRPC.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/latency_p50_p95_comparison.png}
+\caption{Client p50 and p95 latency (ms) across all experiments.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/prometheus_timeseries_traffic.png}
+\caption{Prometheus time-series (matching Grafana dashboard PromQL queries): HTTP and gRPC request rate (req/s) and per-replica traffic share (\%) across Parts B, C, and D.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/prometheus_timeseries_latency_health.png}
+\caption{Prometheus time-series: per-replica p95 latency (ms), Envoy upstream 5xx / backend error rate, and Envoy healthy upstream replica membership.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/grafana_1_rate_share.jpg}\\[3pt]
+\includegraphics[width=0.95\textwidth]{figures/grafana_2_active_latency.jpg}\\[3pt]
+\includegraphics[width=0.95\textwidth]{figures/grafana_3_errors_health.png}
+\caption{Live Grafana dashboard (\texttt{esd-a3-load-balancing}) zoomed to the experiment window: (top) request rate and traffic share \%, (middle) active in-flight requests and p50/p95 latency, (bottom) errors by status and Envoy healthy replica membership.}
+\end{figure}
+
+\needspace{14\baselineskip}
+\section{Correlated Proxy + Backend Log Examples}
+\noindent\textbf{HTTP Search (\texttt{GET /filebeat-*/\_search?q=json.request\_id:"a3-http-1794570766155-1-fd374b"}):}
+\begin{lstlisting}
+Envoy:   {"logger":"envoy_proxy","interface":"http","method":"GET","path":"/books/1","status":200,"duration_ms":32,"upstream_host":"172.18.0.4:8000","replica":"A","request_id":"a3-http-1794570766155-1-fd374b"}
+Replica: {"name":"bookstore_api","message":"HTTP request processed","request_id":"a3-http-1794570766155-1-fd374b","replica":"A","status":200,"duration":0.0302}
+\end{lstlisting}
+
+\noindent\textbf{gRPC Search (\texttt{GET /filebeat-*/\_search?q=json.request\_id:"a3-grpc-1794570786214-1-4a0d54"}):}
+\begin{lstlisting}
+Envoy:   {"logger":"envoy_proxy","interface":"grpc","protocol":"HTTP/2","path":"/bookstore.BookService/GetBook","status":200,"grpc_status":"OK","duration_ms":10,"replica":"A","request_id":"a3-grpc-1794570786214-1-4a0d54"}
+Replica: {"name":"bookstore_grpc","message":"gRPC call processed","request_id":"a3-grpc-1794570786214-1-4a0d54","replica":"A","method":"GetBook","grpc_status":"OK","duration":0.0087}
+\end{lstlisting}
+
+\section{Conclusions}
+\begin{enumerate}
+    \item \textbf{Chosen Strategy:} \textbf{Least Request + Active Health Checks} for both HTTP and gRPC. It matches Round Robin when replicas are healthy, automatically cuts slow-replica traffic in half (33.25\%$\to$17.5\%) under latency degradation, and ejects dead backends in $\sim$4.3\,s.
+    \item \textbf{Different Workload:} For stateful or cache-affine workloads (e.g., per-book in-memory LRU caching), \textbf{Consistent Hashing (\texttt{RING\_HASH})} on \texttt{book\_id} or user key would maximize cache hit rates.
+    \item \textbf{If Envoy Stops:} Envoy is a single point of failure; all client traffic fails even though A, B, C are healthy. \textbf{Improvement:} Run active-active Envoy pairs behind a Virtual IP (\texttt{keepalived}/VRRP) or a cloud L4 NLB.
+\end{enumerate}
+
+\section*{References \& Reused Work}
+\small
+This work extends our Assignment 1 and Assignment 2 \texttt{bookstore-observability} codebase (FastAPI, gRPC \texttt{BookService}, SQLite WAL persistence, Prometheus, Grafana, Filebeat, and Elasticsearch). Envoy load-balancing policies (\texttt{ROUND\_ROBIN}, \texttt{LEAST\_REQUEST}, weighted endpoints) and active health-checking configurations (\texttt{http\_health\_check}, \texttt{grpc\_health\_check}) follow the official Envoy Proxy v1.31 documentation (\url{https://www.envoyproxy.io/docs/envoy/latest/}).
+
+\end{document}

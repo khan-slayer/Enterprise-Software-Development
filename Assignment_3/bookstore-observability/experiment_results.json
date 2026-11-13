@@ -1,0 +1,548 @@
+{
+  "runs": {
+    "part_b_http": {
+      "label": "Part B: A-Only (HTTP)",
+      "interface": "http",
+      "start_iso": "2026-11-13T11:52:45.457410+00:00",
+      "end_iso": "2026-11-13T11:53:06.132772+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.04,
+      "duration_s": 19.96,
+      "sent": 400,
+      "successes": 400,
+      "failures": 0,
+      "error_rate_pct": 0.0,
+      "replica_counts": {
+        "A": 400,
+        "B": 0,
+        "C": 0
+      },
+      "replica_shares_pct": {
+        "A": 100.0,
+        "B": 0.0,
+        "C": 0.0
+      },
+      "status_counts": {
+        "200": 400
+      },
+      "client_p50_ms": 14.88,
+      "client_p95_ms": 51.81,
+      "client_mean_ms": 20.58,
+      "sample_request_ids": {
+        "A": "a3-http-1794570766155-1-fd374b"
+      },
+      "fault_timeline": {}
+    },
+    "part_b_grpc": {
+      "label": "Part B: A-Only (gRPC)",
+      "interface": "grpc",
+      "start_iso": "2026-11-13T11:53:06.138833+00:00",
+      "end_iso": "2026-11-13T11:53:26.187872+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.04,
+      "duration_s": 19.96,
+      "sent": 400,
+      "successes": 400,
+      "failures": 0,
+      "error_rate_pct": 0.0,
+      "replica_counts": {
+        "A": 400,
+        "B": 0,
+        "C": 0
+      },
+      "replica_shares_pct": {
+        "A": 100.0,
+        "B": 0.0,
+        "C": 0.0
+      },
+      "status_counts": {
+        "OK": 400
+      },
+      "client_p50_ms": 11.98,
+      "client_p95_ms": 24.28,
+      "client_mean_ms": 14.91,
+      "sample_request_ids": {
+        "A": "a3-grpc-1794570786214-1-4a0d54"
+      },
+      "fault_timeline": {}
+    },
+    "part_c_rr_http": {
+      "label": "Part C: Round Robin 1:1:1 (HTTP)",
+      "interface": "http",
+      "start_iso": "2026-11-13T11:53:34.818455+00:00",
+      "end_iso": "2026-11-13T11:53:55.250506+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.04,
+      "duration_s": 19.96,
+      "sent": 400,
+      "successes": 399,
+      "failures": 1,
+      "error_rate_pct": 0.25,
+      "replica_counts": {
+        "A": 132,
+        "B": 134,
+        "C": 133
+      },
+      "replica_shares_pct": {
+        "A": 33.08,
+        "B": 33.58,
+        "C": 33.33
+      },
+      "status_counts": {
+        "200": 399,
+        "503": 1
+      },
+      "client_p50_ms": 13.79,
+      "client_p95_ms": 36.31,
+      "client_mean_ms": 18.2,
+      "sample_request_ids": {
+        "B": "a3-http-1794570815275-1-693367",
+        "C": "a3-http-1794570815339-2-6bc71f",
+        "A": "a3-http-1794570815386-3-3febd9"
+      },
+      "fault_timeline": {}
+    },
+    "part_c_rr_grpc": {
+      "label": "Part C: Round Robin 1:1:1 (gRPC)",
+      "interface": "grpc",
+      "start_iso": "2026-11-13T11:53:55.255062+00:00",
+      "end_iso": "2026-11-13T11:54:15.301022+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.04,
+      "duration_s": 19.96,
+      "sent": 400,
+      "successes": 400,
+      "failures": 0,
+      "error_rate_pct": 0.0,
+      "replica_counts": {
+        "A": 133,
+        "B": 133,
+        "C": 134
+      },
+      "replica_shares_pct": {
+        "A": 33.25,
+        "B": 33.25,
+        "C": 33.5
+      },
+      "status_counts": {
+        "OK": 400
+      },
+      "client_p50_ms": 12.38,
+      "client_p95_ms": 23.12,
+      "client_mean_ms": 15.3,
+      "sample_request_ids": {
+        "C": "a3-grpc-1794570835325-1-700be0",
+        "A": "a3-grpc-1794570835386-2-f1eb2a",
+        "B": "a3-grpc-1794570835437-3-6e5867"
+      },
+      "fault_timeline": {}
+    },
+    "part_d_wrr_http": {
+      "label": "Part D.1: Weighted RR 2:1:1 (HTTP)",
+      "interface": "http",
+      "start_iso": "2026-11-13T11:54:19.665550+00:00",
+      "end_iso": "2026-11-13T11:54:40.201670+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.05,
+      "duration_s": 19.95,
+      "sent": 400,
+      "successes": 400,
+      "failures": 0,
+      "error_rate_pct": 0.0,
+      "replica_counts": {
+        "A": 201,
+        "B": 99,
+        "C": 100
+      },
+      "replica_shares_pct": {
+        "A": 50.25,
+        "B": 24.75,
+        "C": 25.0
+      },
+      "status_counts": {
+        "200": 400
+      },
+      "client_p50_ms": 13.25,
+      "client_p95_ms": 38.3,
+      "client_mean_ms": 17.25,
+      "sample_request_ids": {
+        "C": "a3-http-1794570860232-1-ef9c42",
+        "A": "a3-http-1794570860287-2-e44030",
+        "B": "a3-http-1794570860387-4-399cf9"
+      },
+      "fault_timeline": {}
+    },
+    "part_d_wrr_grpc": {
+      "label": "Part D.1: Weighted RR 2:1:1 (gRPC)",
+      "interface": "grpc",
+      "start_iso": "2026-11-13T11:54:40.207396+00:00",
+      "end_iso": "2026-11-13T11:55:00.242004+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.05,
+      "duration_s": 19.95,
+      "sent": 400,
+      "successes": 400,
+      "failures": 0,
+      "error_rate_pct": 0.0,
+      "replica_counts": {
+        "A": 200,
+        "B": 100,
+        "C": 100
+      },
+      "replica_shares_pct": {
+        "A": 50.0,
+        "B": 25.0,
+        "C": 25.0
+      },
+      "status_counts": {
+        "OK": 400
+      },
+      "client_p50_ms": 12.08,
+      "client_p95_ms": 21.52,
+      "client_mean_ms": 15.02,
+      "sample_request_ids": {
+        "A": "a3-grpc-1794570880267-1-a0d739",
+        "B": "a3-grpc-1794570880321-2-ce3626",
+        "C": "a3-grpc-1794570880371-3-fb20f7"
+      },
+      "fault_timeline": {}
+    },
+    "part_d_slow_b_rr_http": {
+      "label": "Part D.2a: Slow B +250ms with Round Robin (HTTP)",
+      "interface": "http",
+      "start_iso": "2026-11-13T11:55:08.725066+00:00",
+      "end_iso": "2026-11-13T11:55:29.254965+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.04,
+      "duration_s": 19.96,
+      "sent": 400,
+      "successes": 400,
+      "failures": 0,
+      "error_rate_pct": 0.0,
+      "replica_counts": {
+        "A": 133,
+        "B": 133,
+        "C": 134
+      },
+      "replica_shares_pct": {
+        "A": 33.25,
+        "B": 33.25,
+        "C": 33.5
+      },
+      "status_counts": {
+        "200": 400
+      },
+      "client_p50_ms": 22.32,
+      "client_p95_ms": 275.44,
+      "client_mean_ms": 103.46,
+      "sample_request_ids": {
+        "C": "a3-http-1794570909176-1-d583da",
+        "A": "a3-http-1794570909240-2-770381",
+        "B": "a3-http-1794570909288-3-1353b0"
+      },
+      "fault_timeline": {}
+    },
+    "part_d_slow_b_rr_grpc": {
+      "label": "Part D.2a: Slow B +250ms with Round Robin (gRPC)",
+      "interface": "grpc",
+      "start_iso": "2026-11-13T11:55:29.260582+00:00",
+      "end_iso": "2026-11-13T11:55:49.445481+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.05,
+      "duration_s": 19.95,
+      "sent": 400,
+      "successes": 400,
+      "failures": 0,
+      "error_rate_pct": 0.0,
+      "replica_counts": {
+        "A": 134,
+        "B": 133,
+        "C": 133
+      },
+      "replica_shares_pct": {
+        "A": 33.5,
+        "B": 33.25,
+        "C": 33.25
+      },
+      "status_counts": {
+        "OK": 400
+      },
+      "client_p50_ms": 22.1,
+      "client_p95_ms": 275.19,
+      "client_mean_ms": 103.79,
+      "sample_request_ids": {
+        "A": "a3-grpc-1794570929320-1-d4ebeb",
+        "B": "a3-grpc-1794570929372-2-04f6fc",
+        "C": "a3-grpc-1794570929422-3-6098a8"
+      },
+      "fault_timeline": {}
+    },
+    "part_d_slow_b_lr_http": {
+      "label": "Part D.2b: Slow B +250ms with Least Request (HTTP)",
+      "interface": "http",
+      "start_iso": "2026-11-13T11:55:54.244561+00:00",
+      "end_iso": "2026-11-13T11:56:14.681129+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.05,
+      "duration_s": 19.95,
+      "sent": 400,
+      "successes": 400,
+      "failures": 0,
+      "error_rate_pct": 0.0,
+      "replica_counts": {
+        "A": 159,
+        "B": 70,
+        "C": 171
+      },
+      "replica_shares_pct": {
+        "A": 39.75,
+        "B": 17.5,
+        "C": 42.75
+      },
+      "status_counts": {
+        "200": 400
+      },
+      "client_p50_ms": 14.68,
+      "client_p95_ms": 274.4,
+      "client_mean_ms": 62.6,
+      "sample_request_ids": {
+        "A": "a3-http-1794570954707-1-37d83a",
+        "C": "a3-http-1794570954764-2-828a30",
+        "B": "a3-http-1794570954857-4-6e177c"
+      },
+      "fault_timeline": {}
+    },
+    "part_d_slow_b_lr_grpc": {
+      "label": "Part D.2b: Slow B +250ms with Least Request (gRPC)",
+      "interface": "grpc",
+      "start_iso": "2026-11-13T11:56:14.688208+00:00",
+      "end_iso": "2026-11-13T11:56:34.815881+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.03,
+      "duration_s": 19.97,
+      "sent": 400,
+      "successes": 400,
+      "failures": 0,
+      "error_rate_pct": 0.0,
+      "replica_counts": {
+        "A": 169,
+        "B": 71,
+        "C": 160
+      },
+      "replica_shares_pct": {
+        "A": 42.25,
+        "B": 17.75,
+        "C": 40.0
+      },
+      "status_counts": {
+        "OK": 400
+      },
+      "client_p50_ms": 14.33,
+      "client_p95_ms": 272.72,
+      "client_mean_ms": 64.77,
+      "sample_request_ids": {
+        "C": "a3-grpc-1794570974749-1-321e46",
+        "A": "a3-grpc-1794570974800-2-9739fa",
+        "B": "a3-grpc-1794570974908-4-09432f"
+      },
+      "fault_timeline": {}
+    },
+    "part_d_hc_http": {
+      "label": "Part D.3: Failure & Recovery (HTTP)",
+      "interface": "http",
+      "start_iso": "2026-11-13T11:58:39.682581+00:00",
+      "end_iso": "2026-11-13T11:59:16.386843+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.03,
+      "duration_s": 35.95,
+      "sent": 720,
+      "successes": 533,
+      "failures": 187,
+      "error_rate_pct": 25.97,
+      "replica_counts": {
+        "A": 241,
+        "B": 53,
+        "C": 239
+      },
+      "replica_shares_pct": {
+        "A": 45.22,
+        "B": 9.94,
+        "C": 44.84
+      },
+      "status_counts": {
+        "200": 533,
+        "503": 187
+      },
+      "client_p50_ms": 14.76,
+      "client_p95_ms": 92.78,
+      "client_mean_ms": 31.45,
+      "sample_request_ids": {
+        "B": "a3-http-1794571120408-1-13bbcd",
+        "A": "a3-http-1794571120471-2-801b3b",
+        "C": "a3-http-1794571120510-3-6dfa84"
+      },
+      "fault_timeline": {
+        "container_stop_initiated_s": 8.005,
+        "container_stopped_s": 9.206,
+        "container_start_initiated_s": 20.004,
+        "container_started_s": 20.348,
+        "last_b_before_removal_s": 7.804,
+        "first_b_after_recovery_s": null,
+        "first_error_s": 9.207,
+        "last_error_s": 35.854
+      }
+    },
+    "part_d_hc_grpc": {
+      "label": "Part D.3: Failure & Recovery (gRPC)",
+      "interface": "grpc",
+      "start_iso": "2026-11-13T11:59:25.427689+00:00",
+      "end_iso": "2026-11-13T12:00:01.462930+00:00",
+      "target_rps": 20.0,
+      "actual_rps": 20.03,
+      "duration_s": 35.95,
+      "sent": 720,
+      "successes": 687,
+      "failures": 33,
+      "error_rate_pct": 4.58,
+      "replica_counts": {
+        "A": 316,
+        "B": 54,
+        "C": 317
+      },
+      "replica_shares_pct": {
+        "A": 46.0,
+        "B": 7.86,
+        "C": 46.14
+      },
+      "status_counts": {
+        "OK": 687,
+        "UNAVAILABLE": 33
+      },
+      "client_p50_ms": 12.04,
+      "client_p95_ms": 29.57,
+      "client_mean_ms": 15.97,
+      "sample_request_ids": {
+        "B": "a3-grpc-1794571165499-1-9a2abe",
+        "C": "a3-grpc-1794571165562-2-8bbeca",
+        "A": "a3-grpc-1794571165612-3-50607f"
+      },
+      "fault_timeline": {
+        "container_stop_initiated_s": 8.013,
+        "container_stopped_s": 8.588,
+        "container_start_initiated_s": 20.012,
+        "container_started_s": 20.353,
+        "last_b_before_removal_s": 7.965,
+        "first_b_after_recovery_s": null,
+        "first_error_s": 8.589,
+        "last_error_s": 12.906
+      }
+    }
+  },
+  "log_correlations": {
+    "http": {
+      "request_id": "a3-http-1794570766155-1-fd374b",
+      "total_hits": 2,
+      "events": [
+        {
+          "duration": 0.0302,
+          "levelname": "INFO",
+          "name": "bookstore_api",
+          "replica": "A",
+          "interface": "http",
+          "method": "GET",
+          "path": "/books/1",
+          "asctime": "2026-11-13 11:52:46,296",
+          "message": "HTTP request processed",
+          "request_id": "a3-http-1794570766155-1-fd374b",
+          "handler": "/books/{book_id}",
+          "status": 200
+        },
+        {
+          "interface": "http",
+          "logger": "envoy_proxy",
+          "method": "GET",
+          "duration_ms": 32,
+          "response_flags": "-",
+          "protocol": "HTTP/1.1",
+          "timestamp": "2026-11-13T11:52:46.264Z",
+          "request_id": "a3-http-1794570766155-1-fd374b",
+          "status": 200,
+          "replica": "A",
+          "path": "/books/1",
+          "upstream_host": "172.18.0.4:8000",
+          "upstream_cluster": "bookstore_http_cluster"
+        }
+      ]
+    },
+    "grpc": {
+      "request_id": "a3-grpc-1794570786214-1-4a0d54",
+      "total_hits": 2,
+      "events": [
+        {
+          "replica": "A",
+          "interface": "grpc",
+          "method": "GetBook",
+          "grpc_status": "OK",
+          "name": "bookstore_grpc",
+          "levelname": "INFO",
+          "message": "gRPC call processed",
+          "request_id": "a3-grpc-1794570786214-1-4a0d54",
+          "service": "bookstore.BookService",
+          "status": 200,
+          "duration": 0.0087,
+          "asctime": "2026-11-13 11:53:06,224"
+        },
+        {
+          "upstream_cluster": "bookstore_grpc_cluster",
+          "timestamp": "2026-11-13T11:53:06.214Z",
+          "duration_ms": 10,
+          "upstream_host": "172.18.0.4:50051",
+          "logger": "envoy_proxy",
+          "replica": "A",
+          "path": "/bookstore.BookService/GetBook",
+          "status": 200,
+          "request_id": "a3-grpc-1794570786214-1-4a0d54",
+          "method": "POST",
+          "grpc_status": "OK",
+          "response_flags": "-",
+          "interface": "grpc",
+          "protocol": "HTTP/2"
+        }
+      ]
+    }
+  },
+  "envoy_access_log_check": {
+    "part_d_wrr_http": {
+      "interface": "http",
+      "start_iso": "2026-11-13T11:54:19.665550+00:00",
+      "end_iso": "2026-11-13T11:54:40.201670+00:00",
+      "total_envoy_logs": 400,
+      "replica_counts": {
+        "A": 201,
+        "B": 99,
+        "C": 100
+      },
+      "replica_shares_pct": {
+        "A": 50.25,
+        "B": 24.75,
+        "C": 25.0
+      }
+    },
+    "part_d_wrr_grpc": {
+      "interface": "grpc",
+      "start_iso": "2026-11-13T11:54:40.207396+00:00",
+      "end_iso": "2026-11-13T11:55:00.242004+00:00",
+      "total_envoy_logs": 121,
+      "replica_counts": {
+        "A": 61,
+        "B": 30,
+        "C": 30
+      },
+      "replica_shares_pct": {
+        "A": 50.41,
+        "B": 24.79,
+        "C": 24.79
+      }
+    }
+  }
+}
